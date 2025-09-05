@@ -1,4 +1,4 @@
-name: Publish Website to CPanel
+name: Publish Website to CPanelxxxx
 on:
   push:
     branches:
@@ -61,7 +61,8 @@ jobs:
       - name: Create required directories
         run: |
           echo "Creating required directories..."
-          mkdir -p storage/logs
+          mkdir -p
+           storage/logs
           mkdir -p storage/framework/cache
           mkdir -p storage/framework/sessions
           mkdir -p storage/framework/views
