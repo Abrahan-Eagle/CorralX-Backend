@@ -57,7 +57,17 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
-      # Paso 8: Desplegar archivos por FTP
+      # Paso 8: Crear directorios necesarios antes del despliegue
+      - name: Create required directories
+        run: |
+          echo "Creating required directories..."
+          mkdir -p storage/logs
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p bootstrap/cache
+
+      # Paso 9: Desplegar archivos por FTP
       - name: FTP-Deploy-Action
         uses: SamKirkland/FTP-Deploy-Action@4.3.3
         with:
@@ -65,20 +75,20 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
 
-      # Paso 9: Configurar permisos de directorios (optimizado para servidor compartido)
+      # Paso 10: Configurar permisos de directorios (optimizado para servidor compartido)
       - name: Set directory permissions
         run: |
           echo "Setting up directory permissions for shared hosting..."
           chmod -R 755 storage bootstrap/cache
           chmod -R 644 .env
 
-      # Paso 10: Crear enlace simbólico de storage (si es necesario)
+      # Paso 11: Crear enlace simbólico de storage (si es necesario)
       - name: Create storage link
         run: |
           echo "Creating storage link..."
           php artisan storage:link || echo "Storage link already exists or not needed"
 
-      # Paso 11: Verificar el despliegue
+      # Paso 12: Verificar el despliegue
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
