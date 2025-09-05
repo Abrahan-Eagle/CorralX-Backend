@@ -1,4 +1,4 @@
-name: 🚀 Despliegue Automático Completoxx
+name: 🚀 Despliegue Automático Laravel Backend
 
 on:
   push:
@@ -7,39 +7,53 @@ on:
 
 jobs:
   deploy:
-    name: 🎉 Desplegar Todo el Proyecto
+    name: 🎉 Desplegar Backend Laravel
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Configurar Node.js (si es necesario)
-      - name: ⚙️ Configurar Node.js 20
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20'
-
-      # Paso 2: Obtener código fuente
+      # Paso 1: Obtener código fuente
       - name: 🚚 Clonar repositorio
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      # Paso 3: Construir assets (si es necesario)
-      - name: 🔨 Construir proyecto
-        run: npm install && npm run build
-
-      # Paso 4: Configurar PHP (opcional, solo para proyectos PHP)
+      # Paso 2: Configurar PHP
       - name: 🐘 Configurar PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           tools: composer
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo
 
-      # Paso 5: Instalar dependencias PHP (opcional)
-      - name: 📦 Instalar dependencias
-        run: composer install --optimize-autoloader
+      # Paso 3: Instalar dependencias PHP
+      - name: 📦 Instalar dependencias Composer
+        run: composer install --optimize-autoloader --no-dev
 
-      # Paso 6: Desplegar archivos via FTP
-      - name: 📂 Desplegar todos los archivos
+      # Paso 4: Configurar el archivo .env desde los secretos
+      - name: 🔧 Configurar archivo .env
+        run: |
+          echo "Configurando archivo .env desde secretos..."
+          echo "${{ secrets.ENV_CONTENT }}" > .env
+          echo "APP_DEBUG=false" >> .env
+          echo "APP_ENV=production" >> .env
+
+      # Paso 5: Optimizar Laravel para producción
+      - name: ⚡ Optimizar Laravel
+        run: |
+          php artisan config:clear
+          php artisan cache:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      # Paso 6: Crear enlace simbólico de storage
+      - name: 🔗 Crear enlace de storage
+        run: php artisan storage:link
+
+      # Paso 7: Desplegar archivos via FTP
+      - name: 📂 Desplegar archivos al servidor
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -49,122 +63,24 @@ jobs:
           local-dir: ./
           protocol: ftps
           port: 21
+          timeout: 60s
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.env.example
+            **/tests/**
+            **/.github/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/vendor/**
+            **/.DS_Store
+            **/Thumbs.db
 
-
-
-      # Paso 7: Configurar el archivo .env desde los secretos
-      - name: Setup environment file
+      # Paso 8: Configurar permisos en el servidor (si es posible)
+      - name: 🔐 Configurar permisos
         run: |
-          echo "Setting up .env from secrets..."
-          echo "${{ secrets.ENV_CONTENT }}" > .env
-          cat .env
+          echo "Configuración completada. Verifica los permisos en el servidor."
 
-      # Paso 8: Habilitar depuración de Laravel
-      - name: Enable Laravel debug
-        run: |
-          echo "APP_DEBUG=true" >> .env
-          sed -i 's/APP_DEBUG=.*/APP_DEBUG=true/' .env
-
-      # Paso 9: Configurar permisos de directorios
-      - name: Set directory permissions
-        run: chmod -R 775 storage bootstrap/cache
-
-      # Paso 10: Verificar .env
-      - name: Check .env setup
-        run: |
-          echo "Verifying .env configuration..."
-          cat .env
-          php artisan config:clear
-          php artisan cache:clear
-          php artisan config:cache
-          php artisan storage:link
-
-      # Paso 11: Verificar variables de entorno (opcional)
-      - name: Test .env variables
-        run: |
-          curl https://backend.corralx.com/api/env-test
-
-# name: Publish Website to CPanel
-# on:
-#   push:
-#     branches:
-#       - main
-
-# jobs:
-#   FTP-Deploy-Action:
-#     name: FTP-Deploy-Action x
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       # Paso 1: Instalar Node.js 20
-#       - name: Set up Node.js 20
-#         uses: actions/setup-node@v3
-#         with:
-#           node-version: '20'
-
-#       # Paso 2: Clonar el repositorio
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
-#         with:
-#           fetch-depth: 2
-
-#       # Paso 3: Instalar dependencias de Node.js y compilar activos
-#       - name: Build assets
-#         run: npm install && npm run build
-
-#       # Paso 4: Instalar PHP y Composer
-#       - name: Install PHP and Composer
-#         uses: shivammathur/setup-php@v2
-#         with:
-#           php-version: '8.2' # Ajusta a la versión de PHP usada en tu proyecto Laravel
-#           tools: 'composer'
-
-#       # Paso 5: Instalar dependencias PHP
-#       - name: Install PHP dependencies
-#         run: composer install --optimize-autoloader
-
-#       # Paso 6: Desplegar archivos por FTP
-#       - name: FTP-Deploy-Action
-#         uses: SamKirkland/FTP-Deploy-Action@4.3.3
-#         with:
-#           server: ${{ secrets.FTP_SERVER }}
-#           username: ${{ secrets.FTP_USERNAME }}
-#           password: ${{ secrets.FTP_PASSWORD }}
-#           server-dir: /
-#           local-dir: ./public/  # Or your build directory
-#           protocol: ftps
-#           port: 21
-#           security: strict
-#           timeout: 30s
-
-#       # Paso 7: Configurar el archivo .env desde los secretos
-#       - name: Setup environment file
-#         run: |
-#           echo "Setting up .env from secrets..."
-#           echo "${{ secrets.ENV_CONTENT }}" > .env
-#           cat .env # Para depurar y verificar el contenido del .env
-
-#       # Paso 8: Habilitar depuración de Laravel
-#       - name: Enable Laravel debug
-#         run: |
-#           echo "APP_DEBUG=true" >> .env
-#           sed -i 's/APP_DEBUG=.*/APP_DEBUG=true/' .env # Asegúrate de que APP_DEBUG sea true para ver los errores en el entorno de producción
-
-#       # Paso 9: Configurar permisos de directorios
-#       - name: Set directory permissions
-#         run: chmod -R 775 storage bootstrap/cache
-
-#       # Paso 10: Verificar si el archivo .env está cargado correctamente
-#       - name: Check .env setup
-#         run: |
-#           echo "Verifying .env configuration..."
-#           cat .env
-#           php artisan config:clear
-#           php artisan cache:clear
-#           php artisan config:cache
-#           php artisan storage:link
-
-#       # Paso 11: Verificar las variables de entorno en Laravel (opcional)
-#       - name: Test .env variables
-#         run: |
-#           curl https://zonix.uniblockweb.com/api/env-test
