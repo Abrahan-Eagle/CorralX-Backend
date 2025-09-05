@@ -42,9 +42,9 @@ jobs:
           sed -i 's/APP_DEBUG=.*/APP_DEBUG=false/' .env
           cat .env # Para depurar y verificar el contenido del .env
 
-      # Paso 6: Instalar dependencias PHP (optimizado para producción)
+      # Paso 6: Instalar dependencias PHP (incluyendo dev para seeders)
       - name: Install PHP dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
+        run: composer install --optimize-autoloader --no-interaction
 
       # Paso 7: Optimizar Laravel para producción
       - name: Optimize Laravel for production
