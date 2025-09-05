@@ -17,17 +17,17 @@ jobs:
         with:
           fetch-depth: 2
 
-      # Paso 2: Configurar PHP
-      - name: 🐘 Configurar PHP 8.2
+      # Paso 2: Configurar PHP para Laravel 10
+      - name: 🐘 Configurar PHP 8.1 (Laravel 10 compatible)
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.1'
           tools: composer
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, pdo, openssl, tokenizer, zip, curl, fileinfo, bcmath
 
-      # Paso 3: Instalar dependencias PHP
+      # Paso 3: Instalar dependencias PHP (sin --no-dev para servidor compartido)
       - name: 📦 Instalar dependencias Composer
-        run: composer install --optimize-autoloader --no-dev
+        run: composer install --optimize-autoloader --no-interaction
 
       # Paso 4: Configurar el archivo .env desde los secretos
       - name: 🔧 Configurar archivo .env
@@ -36,9 +36,10 @@ jobs:
           echo "${{ secrets.ENV_CONTENT }}" > .env
           echo "APP_DEBUG=false" >> .env
           echo "APP_ENV=production" >> .env
+          echo "LOG_CHANNEL=single" >> .env
 
-      # Paso 5: Optimizar Laravel para producción
-      - name: ⚡ Optimizar Laravel
+      # Paso 5: Optimizar Laravel 10 para servidor compartido
+      - name: ⚡ Optimizar Laravel 10
         run: |
           php artisan config:clear
           php artisan cache:clear
@@ -47,13 +48,15 @@ jobs:
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
+          php artisan optimize
 
-      # Paso 6: Crear enlace simbólico de storage
+      # Paso 6: Crear enlace simbólico de storage (solo si es posible)
       - name: 🔗 Crear enlace de storage
-        run: php artisan storage:link
+        run: |
+          php artisan storage:link || echo "No se pudo crear el enlace de storage (normal en servidores compartidos)"
 
-      # Paso 7: Desplegar archivos via FTP
-      - name: 📂 Desplegar archivos al servidor
+      # Paso 7: Desplegar archivos via FTP (optimizado para servidor compartido)
+      - name: 📂 Desplegar archivos al servidor compartido
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -63,7 +66,8 @@ jobs:
           local-dir: ./
           protocol: ftps
           port: 21
-          timeout: 60s
+          timeout: 120s
+          log-level: minimal
           exclude: |
             **/.git*
             **/.git*/**
@@ -75,12 +79,22 @@ jobs:
             **/storage/framework/cache/**
             **/storage/framework/sessions/**
             **/storage/framework/views/**
+            **/storage/app/**
             **/vendor/**
             **/.DS_Store
             **/Thumbs.db
+            **/composer.lock
+            **/artisan
+            **/bootstrap/cache/**
+            **/database/**
+            **/resources/views/**
 
-      # Paso 8: Configurar permisos en el servidor (si es posible)
-      - name: 🔐 Configurar permisos
+      # Paso 8: Verificar despliegue
+      - name: ✅ Verificar despliegue
         run: |
-          echo "Configuración completada. Verifica los permisos en el servidor."
+          echo "Despliegue completado para Laravel 10 en servidor compartido"
+          echo "Recuerda configurar manualmente:"
+          echo "- Permisos de directorios (755 para directorios, 644 para archivos)"
+          echo "- Configuración de .htaccess si es necesario"
+          echo "- Variables de entorno en el panel de control del hosting"
 
